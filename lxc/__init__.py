@@ -12,7 +12,7 @@ class ContainerNotExists(Exception): pass
 
 
 _logger = logging.getLogger("pylxc")
-_monitor = None  
+_monitor = None
 
 
 class _LXCMonitor(threading.Thread):
@@ -20,7 +20,7 @@ class _LXCMonitor(threading.Thread):
         threading.Thread.__init__(self)
         self._process = None
         self._monitors = {}
-        
+
     def run(self):
         master, slave = pty.openpty()
         cmd = ['lxc-monitor', '-n', '.*']
@@ -38,33 +38,33 @@ class _LXCMonitor(threading.Thread):
                     logging.debug("State of container '%s' changed to '%s'", container, state)
                     self._monitors[container](state)
         _logger.info("LXC Monitor stopped!")
-    
+
     def add_monitor(self, name, callback):
         self._monitors[name] = callback
-    
+
     def rm_monitor(self, name):
         self._monitors.pop(name)
-    
+
     def is_monitored(self, name):
         return name in self._monitors
-    
+
     def kill(self):
         try:
             self._process.terminate()
             self._process.wait()
         except:
             pass
-        self.join() 
+        self.join()
 
-        
+
 def create(name, config_file=None, template=None, backing_store=None, template_options=None):
     '''
     Create a new container
     raises ContainerAlreadyExists exception if the container name is reserved already.
-    
+
     :param template_options: Options passed to the specified template
     :type template_options: list or None
-    
+
     '''
     if exists(name):
         raise ContainerAlreadyExists("The Container %s is already created!" % name)
@@ -99,7 +99,7 @@ def exists(name):
     return False
 
 def running():
-    ''' 
+    '''
     returns a list of the currently running containers
     '''
     return all_as_dict()['Running']
@@ -114,12 +114,12 @@ def stopped():
 
 def all_as_dict():
     '''
-    returns a dict {'Running': ['cont1', 'cont2'], 
+    returns a dict {'Running': ['cont1', 'cont2'],
                     'Stopped': ['cont3', 'cont4']
                     }
-                    
+
     '''
-    cmd = ['lxc-list']
+    cmd = ['lxc-ls', '--fancy']
     out = subprocess.check_output(cmd).splitlines()
     stopped = []
     running = []
@@ -130,13 +130,13 @@ def all_as_dict():
         if c == 'RUNNING':
             current = running
             continue
-        if c == 'STOPPED':
+        elif c == 'STOPPED':
             current = stopped
             continue
-        if c == 'FROZEN':
+        elif c == 'FROZEN':
             current = frozen
             continue
-        if not len(c):
+        else:
             continue
         current.append(c)
     return {'Running': running,
@@ -149,7 +149,7 @@ def all_as_list():
     returns a list of all defined containers
     '''
     as_dict = all_as_dict()
-    containers = as_dict['Running'] + as_dict['Frozen'] + as_dict['Stopped'] 
+    containers = as_dict['Running'] + as_dict['Frozen'] + as_dict['Stopped']
     containers_list = []
     for i in containers:
         i = i.replace(' (auto)', '')
@@ -179,7 +179,7 @@ def stop(name):
         raise ContainerNotExists("The container (%s) does not exist!" % name)
     cmd = ['lxc-stop', '-n', name]
     subprocess.check_call(cmd)
-    
+
 
 def kill(name, signal):
     '''
@@ -205,8 +205,8 @@ def shutdown(name, wait=False, reboot=False):
         cmd += ['-w']
     if reboot:
         cmd += ['-r']
-        
-    subprocess.check_call(cmd)    
+
+    subprocess.check_call(cmd)
 
 
 def destroy(name):
@@ -223,9 +223,9 @@ def destroy(name):
 def monitor(name, callback):
     '''
     monitors actions on the specified container,
-    callback is a function to be called on 
+    callback is a function to be called on
     '''
-    global _monitor 
+    global _monitor
     if not exists(name):
         raise ContainerNotExists("The container (%s) does not exist!" % name)
     if _monitor:
@@ -310,7 +310,7 @@ def notify(name, states, callback):
     executes the callback function with no parameters when the container reaches the specified state or states
     states can be or-ed or and-ed
         notify('test', 'STOPPED', letmeknow)
-        
+
         notify('test', 'STOPPED|RUNNING', letmeknow)
     '''
     if not exists(name):
